@@ -10,176 +10,83 @@ Lucas da Rosa Kieslich
 
 #include <unistd.h>
 #include <fcntl.h>
+
+#include <iomanip>
+#include <time.h>
+#include <string>
+
 //#include <termios.h>
 
 //bibliotecas que foram propriamente adicionadas no arquivo CMakeList.txt
 //necessario a presença do pico-sdk https://github.com/raspberrypi/pico-sdk.git
-#include "pico/stdlib.h"
+
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
-
+#include "pico/stdlib.h"
 #include "hardware/uart.h"
+#include "pico/stdio_usb.h"
+
+#include "Clock.cpp"
+#include "Calendar.cpp"
+#include "ClockCalendar.cpp"
+
+#include "StepperMotor.cpp"
+#include "FwrdSM.cpp"
+#include "BwrdSM.cpp"
+#include "LDR_A.cpp"
+#include "LDR_D.cpp"
+#include "List.cpp"
+
 
 using namespace std;
 
-template <typename T>
-class StepperMotor {
-    template <typename U>
-    friend void customFunction(const StepperMotor<U>& stepper);
+void call_clock_calendar(int& hora, int& min, int& seg, int& dia, int& mes, int& ano, int& ampm){
+        int64_t this_time, last_time;
+        int64_t currentTime = time_us_64(); 
+        int aux_hour, aux_min, aux_sec, aux_ampm, aux_dia, aux_mes, aux_ano;  
+        ClockCalendar clkCalendar(aux_hour, aux_min, aux_sec, aux_ampm, aux_dia, aux_mes, aux_ano);
+        double time_counter = 0;
+        time_counter += (double)(this_time - last_time);
 
-public:
-    StepperMotor(int in1, int in2, int in3, int in4)
-        : IN1(in1), IN2(in2), IN3(in3), IN4(in4), lastStep(0) {
-        stdio_init_all();
-        gpio_init(IN1);
-        gpio_init(IN2);
-        gpio_init(IN3);
-        gpio_init(IN4);
-        gpio_set_dir(IN1, GPIO_OUT);
-        gpio_set_dir(IN2, GPIO_OUT);
-        gpio_set_dir(IN3, GPIO_OUT);
-        gpio_set_dir(IN4, GPIO_OUT);
+        last_time = this_time;
+        
+        if(time_counter > 1)
+        {   
+       
+        clkCalendar.readClock(hora, seg, min, ampm);
+        clkCalendar.readCalendar(mes, dia, ano);
+
+        time_counter -= 1;
+            //count++;
+            clkCalendar.advance();
+        }
+
+    }   
+
+void send_data_via_uart(const int* data, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+        uart_putc(uart0, data[i]);
     }
-
-    virtual ~StepperMotor() {}
-
-    virtual void move(int steps, int delayTime) = 0;
-
-    // Sobrecarga de operador
-    bool operator==(const StepperMotor<T>& other) const {
-        return this->lastStep == other.lastStep;
-    }
-
-protected:
-    const int IN1;
-    const int IN2;
-    const int IN3;
-    const int IN4;
-    int lastStep;  // Variavel para trackear o ultimo passo
-
-    void setStep(int w1, int w2, int w3, int w4) {
-        gpio_put(IN1, w1);
-        gpio_put(IN2, w2);
-        gpio_put(IN3, w3);
-        gpio_put(IN4, w4);
-        sleep_ms(20);
-    }
-
-    void updateLastStep(int step) {
-        lastStep = step;
-    }
-};
-
-// Função friend para o StepperMotor
-template <typename T>
-void customFunction(const StepperMotor<T>& stepper) {
-    cout << "Friend function called. Last step: " << stepper.lastStep << endl;
 }
 
-class ForwardStepperMotor : public StepperMotor<int> {
-public:
-    ForwardStepperMotor(int in1, int in2, int in3, int in4)
-        : StepperMotor<int>(in1, in2, in3, in4) {}
-
-    void move(int steps, int delayTime) override {
-        for (int i = 0; i < steps; ++i) {
-            setStep(1, 0, 0, 0);
-            setStep(0, 1, 0, 0);
-            setStep(0, 0, 1, 0);
-            setStep(0, 0, 0, 1);
-            updateLastStep(i % 4);  // Atualiza o passo de acordo com o passo atual
-            sleep_ms(delayTime);
-        }
-    }
-    int getLastStep() const {
-        return lastStep;
-     }
-};
-
-class BackwardStepperMotor : public StepperMotor<int> {
-public:
-    BackwardStepperMotor(int in1, int in2, int in3, int in4)
-        : StepperMotor<int>(in1, in2, in3, in4) {}
-
-    void move(int steps, int delayTime) override {
-        for (int i = 0; i < steps; ++i) {
-            setStep(0, 0, 0, 1);
-            setStep(0, 0, 1, 0);
-            setStep(0, 1, 0, 0);
-            setStep(1, 0, 0, 0);
-            updateLastStep(i % 4);  
-            sleep_ms(delayTime);
-        }
-    }
-    int getLastStep() const {
-    return lastStep;
-     }
-};
-
-class LDR_analog {
-public:
-    LDR_analog(int adcPin, int gpio_initPin)
-        : ADC_PIN(adcPin), GPIO_INIT_PIN(gpio_initPin) {
-        adc_init();
-        adc_gpio_init(adcPin); 
-        adc_select_input(gpio_initPin);
-        adc_set_temp_sensor_enabled(true);
-
-        
-    }
-
-    ~LDR_analog() {}
-
-    float readVoltage() {
-        adc_select_input(GPIO_INIT_PIN); 
-        adc_select_input(ADC_PIN);
-
-        // Permite o ADC fazer a conversão completa
-        sleep_ms(1);
-
-        // Lê o resultado
-        uint16_t rawValue = adc_read();
-
-        float voltage = (rawValue /3.3) / (1 << 12); // porque o Vref é 3.3V
-        return voltage;
-    }
-
-private:
-    const int ADC_PIN;
-    const int GPIO_INIT_PIN;
-};
-
-class LDR_dig {
-public:
-    LDR_dig(int gpioPin)
-        : GPIO_PIN(gpioPin) {
-        gpio_init(GPIO_PIN);
-        gpio_set_dir(GPIO_PIN, GPIO_IN);
-
-     
-    }
-
-    ~LDR_dig() {}
-
-    bool isHigh() {
-        return gpio_get(GPIO_PIN) == 1;
-    }
-
-private:
-    const int GPIO_PIN;
-};
-
-
-std::vector<float> listaVoltage1;
-std::vector<float> listaVoltage2;
-std::vector<int> listaLastStep;
-
 int main() {
+  List Fila_log;
 
-    uart_init(uart0, 9600);  // Baud rate a definir................
+  int dadosR[11] = {0};// buffer temporário para recebimento dos dados enviados pela uart.
+  int hora, min, seg, dia, mes, ano, ampm;
+  Fila_log.insertAfterLast(dadosR[0], dadosR[1], dadosR[2], dadosR[3], dadosR[4], dadosR[5], dadosR[6], dadosR[7], dadosR[8], dadosR[9], dadosR[10]);
+
+    call_clock_calendar(hora, min, seg, dia, mes, ano, ampm);
+
+    stdio_usb_init();
+    
+    uart_init(uart0, 9600);  
+    gpio_set_function(16, GPIO_FUNC_UART);
+    gpio_set_function(17, GPIO_FUNC_UART);
     uart_set_format(uart0, 8, 1, UART_PARITY_NONE);
 
-    uart_puts(uart0, "Hello, USB!\n");
+
+   
 
     const int STEPPER_IN1 = 0;
     const int STEPPER_IN2 = 1;
@@ -205,9 +112,14 @@ int main() {
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
+    int estado_LDR1;
+    int estado_LDR2;
+    int estado_LDRdig;
 
 
     while (true) {
+        printf("Hello, PC!\n");
+
         bool isDigitalHigh = ldrDig.isHigh();
 
         float voltage1 = ldr1.readVoltage();
@@ -216,29 +128,43 @@ int main() {
         if (isDigitalHigh == 0){
         forwardStepper.move(0, 50);  
         gpio_put(LED_PIN, 1);
-        sleep_ms(10); 
+        sleep_ms(10);
+        estado_LDRdig = 1; 
+        estado_LDR1 = 0;
+        estado_LDR2 = 0;
         }
         
         else if (voltage1>=voltage2){
-        backwardStepper.move(5, 50); 
+        backwardStepper.move(5, 10); 
         gpio_put(LED_PIN, 1);
         sleep_ms(10);
+        estado_LDRdig = 0;
+        estado_LDR1 = 1;
+        estado_LDR2 = 0;
         }
         else{
         forwardStepper.move(1, 10);  
         sleep_ms(10); 
+        estado_LDRdig = 0;
+        estado_LDR1 = 1;
+        estado_LDR2 = 0;
                }  
-  //      uart_puts(uart0, ("Voltage1: " + to_string(voltage1) + "\n").c_str());
-  //      uart_puts(uart0, ("Voltage2: " + to_string(voltage2) + "\n").c_str());
-  //      uart_puts(uart0, ("LastStep: " + to_string(forwardStepper.getLastStep()) + "\n").c_str());
-    listaVoltage1.push_back(voltage1);
-    listaVoltage2.push_back(voltage2);
-    listaLastStep.push_back(forwardStepper.getLastStep());
 
-    // Envia os dados pela UART
-    for (size_t i = 0; i < listaVoltage1.size(); ++i) {
-        printf("Voltage1: %.2f, Voltage2: %.2f, LastStep: %d\n", listaVoltage1[i], listaVoltage2[i], listaLastStep[i]);
-     }
+
+        dadosR[0] = estado_LDR1;
+        dadosR[1] = estado_LDR2;
+        dadosR[2] = estado_LDRdig;
+        dadosR[3] = forwardStepper.getLastStep();
+        dadosR[4] = hora;
+        dadosR[5] = seg;
+        dadosR[6] = min;
+        dadosR[7] = ampm;
+        dadosR[8] = dia;
+        dadosR[9] = mes;
+        dadosR[10] = ano;
+
+       send_data_via_uart(dadosR, sizeof(dadosR) / sizeof(dadosR[0]));     // Envia os dados pela UART
+
         }
 
 

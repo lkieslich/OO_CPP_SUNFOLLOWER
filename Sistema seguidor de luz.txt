@@ -1,0 +1,16 @@
+Sistema seguidor de luz solar
+
+
+Lucas da Rosa Kieslich \\
+
+PPGEEL - UFSC\\
+
+Introdução
+
+O projeto consiste essencialmente na implementação de um sistema seguidor de luz solar (\textit{sun follower}) com um eixo de rotação (horizontal) utilizando um motor de passo, onde dos sensores de luminosidade leem uma diferença de incidência entre ambas, sendo estabelecida uma diferença aceitável entre ambas, e o sistema deve atuar de forma a posicionar os sensores sempre buscando a direção da maior luminosidade.
+
+O sistema será embarcado utilizando um microcontrolador Raspberry Pi Pico (RP2040), o atuador consiste de um motor de passo 28BYJ-48 e a leitura dos níveis de iluminação se dará por meio de dois sensores fototransistores TEMT6000 e um sistema pré montado com sensor de luminosidade que envia um sinal binário (utilizando um LDR - \textit{Light Dependent Resistor}).
+
+Foi implementada uma telemetria que realiza a comunicação via UART entre o sistema embarcado e um computador pessoal que enviará os dados de leitura do sistema em relação ao tempo. Leia-se dados de leitura como a posição do motor (passo), a diferença do nível de iluminação entre os sensores analógicos e o nível digital (alto ou baixo) do LDR.
+
+As etapas relacionadas à programação orientada a objetos supracitadas do sistema serão implementado utilizando linguagem C++, onde o processo de comunicação com o Linux seria realizada através de uma fila cada sensor possuiria uma classe própria que se benificiariam de polimorfismo através de uma classe abstrata pai, entre outros recursos estudados em aula que poderão ser implementados de acordo com o enunciado do projeto.
