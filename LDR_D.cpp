@@ -1,3 +1,7 @@
+/*
+Classe para leitura do sensor digital.
+Simplesmente seta a gpio que deverá ser lida
+*/
 #include "LDR_D.h"
 
 LDR_dig::LDR_dig(int gpioPin)

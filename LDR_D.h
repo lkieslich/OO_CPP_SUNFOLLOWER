@@ -1,4 +1,7 @@
-
+/*
+Classe para leitura do sensor digital.
+Simplesmente seta a gpio que deverá ser lida
+*/
 #include "hardware/gpio.h"
 
 class LDR_dig {

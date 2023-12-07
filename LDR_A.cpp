@@ -1,11 +1,14 @@
+/*
+Classe onde é feita a implementação para leitura dos sensores analógicos.
+*/
 #include "LDR_A.h"
 
 
 LDR_analog::LDR_analog(int adcPin, int gpio_initPin)
     : ADC_PIN(adcPin), GPIO_INIT_PIN(gpio_initPin) {
     adc_init();
-    adc_gpio_init(adcPin); 
-    adc_select_input(gpio_initPin);
+    adc_gpio_init(adcPin); // seta a gpio como adc
+    adc_select_input(gpio_initPin); // inicia o pino previamente definido para leitura analogica
     adc_set_temp_sensor_enabled(true);
 }
 

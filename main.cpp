@@ -26,10 +26,12 @@ Lucas da Rosa Kieslich
 #include "hardware/uart.h"
 #include "pico/stdio_usb.h"
 
+// Sistema de registro de hora e data desenvolvido em aula
 #include "Clock.cpp"
 #include "Calendar.cpp"
 #include "ClockCalendar.cpp"
 
+// Classes inteiramente novas para o controle do sistema
 #include "StepperMotor.cpp"
 #include "FwrdSM.cpp"
 #include "BwrdSM.cpp"
@@ -39,6 +41,8 @@ Lucas da Rosa Kieslich
 
 
 using namespace std;
+
+// Abaixo consta a função externa que realiza a leitura dos dados de hora e data a serem incorporados na fila do log
 
 void call_clock_calendar(int& hora, int& min, int& seg, int& dia, int& mes, int& ano, int& ampm){
         int64_t this_time, last_time;
@@ -63,6 +67,7 @@ void call_clock_calendar(int& hora, int& min, int& seg, int& dia, int& mes, int&
 
     }   
 
+// Função padrão do Raspberry Pi Pico para envio de dados por protocolo UART
 void send_data_via_uart(const int* data, size_t length) {
     for (size_t i = 0; i < length; ++i) {
         uart_putc(uart0, data[i]);
@@ -80,19 +85,20 @@ int main() {
 
     stdio_usb_init();
     
+    // Iniciando a comunicação UART e setando os pinos 16 e 17 como TXD e RXD (vide biblioteca hardware_uart)
     uart_init(uart0, 9600);  
     gpio_set_function(16, GPIO_FUNC_UART);
     gpio_set_function(17, GPIO_FUNC_UART);
-    uart_set_format(uart0, 8, 1, UART_PARITY_NONE);
+    uart_set_format(uart0, 11, 1, UART_PARITY_NONE);
 
 
-   
-
+    // Definindo as portas gpio que serão utilizadas para o controle do motor de passo.
     const int STEPPER_IN1 = 0;
     const int STEPPER_IN2 = 1;
     const int STEPPER_IN3 = 2;
     const int STEPPER_IN4 = 3;
 
+    // Definindo o pino da gpio 4 para ler os valores binarios do sensor LDR digital.
     const int LDR_DIG_PIN = 4;   
     LDR_dig ldrDig(LDR_DIG_PIN);
 
@@ -104,38 +110,36 @@ int main() {
     LDR_analog ldr1(LDR_ADC_PIN1, LDR_GPIO_INIT_PIN1);
     LDR_analog ldr2(LDR_ADC_PIN2, LDR_GPIO_INIT_PIN2);
 
+    /* Define os pinos que farão enviarão a informação para os 4 bits de controle para o driver 
+       do motor de passo através de cada uma das bibliotecas de movimento.
+    */
     ForwardStepperMotor forwardStepper(STEPPER_IN1, STEPPER_IN2, STEPPER_IN3, STEPPER_IN4);
     BackwardStepperMotor backwardStepper(STEPPER_IN1, STEPPER_IN2, STEPPER_IN3, STEPPER_IN4);
 
-
-    const uint LED_PIN = PICO_DEFAULT_LED_PIN;
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-
+    // Cria as variáveis auxiliares que serão usadas para construção do log.
     int estado_LDR1;
     int estado_LDR2;
     int estado_LDRdig;
 
-
+    // Inicia-se o loop infinito para manter o motor sempre em movimento
     while (true) {
-        printf("Hello, PC!\n");
 
         bool isDigitalHigh = ldrDig.isHigh();
 
         float voltage1 = ldr1.readVoltage();
         float voltage2 = ldr2.readVoltage();
 
-        if (isDigitalHigh == 0){
+        if (isDigitalHigh == 0){      // para o motor se o led digitar atender aos requisitos de iluminação
         forwardStepper.move(0, 50);  
         gpio_put(LED_PIN, 1);
         sleep_ms(10);
-        estado_LDRdig = 1; 
+        estado_LDRdig = 1;           // as variáveis a serem integradas no log são atualizadas
         estado_LDR1 = 0;
         estado_LDR2 = 0;
         }
         
-        else if (voltage1>=voltage2){
-        backwardStepper.move(5, 10); 
+        else if (voltage1>=voltage2){   // faz o motor girar para a esquerda
+        backwardStepper.move(5, 10);    // necessário um delay maior (5ms) para compensar construção precária do drive adquirido
         gpio_put(LED_PIN, 1);
         sleep_ms(10);
         estado_LDRdig = 0;
@@ -143,14 +147,14 @@ int main() {
         estado_LDR2 = 0;
         }
         else{
-        forwardStepper.move(1, 10);  
+        forwardStepper.move(1, 10);     // faz o motor girar para a direita
         sleep_ms(10); 
         estado_LDRdig = 0;
         estado_LDR1 = 1;
         estado_LDR2 = 0;
                }  
 
-
+// Dados são incluídos na respectiva ordem da fila.
         dadosR[0] = estado_LDR1;
         dadosR[1] = estado_LDR2;
         dadosR[2] = estado_LDRdig;

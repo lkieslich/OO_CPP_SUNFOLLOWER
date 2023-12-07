@@ -1,4 +1,7 @@
-
+/*
+Classe para criação de uma lista, construida com base na classe Node estudada em aula.
+Utilizada para envio do log.
+*/
 #pragma once
 
 #include "Node.h"

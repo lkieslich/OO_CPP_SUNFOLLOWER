@@ -1,7 +1,7 @@
 #include "Node.h"
 
-// Constructor - initializes the node
-//
+// Construtor - inicializa o Node
+
 Node::Node(int ldr1, int ldr2, int ldr_dig, int step_mot, int hr, int min, int sec, int ampm, int dd, int mm, int aa, Node* nxt){
      LDR1 = ldr1;
      LDR2 = ldr2; 
@@ -17,8 +17,8 @@ Node::Node(int ldr1, int ldr2, int ldr_dig, int step_mot, int hr, int min, int s
      next = nxt;
 }
 
-// getVal returns the integer value stored in the node
-//
+// getVal retorna os valores inteiros armazenados no Node
+
 int Node::getldr1(){
      return LDR1;
 }
@@ -52,13 +52,13 @@ int Node::getmm(){
 int Node::getaa(){
      return AA;
 }
-// getNext returns a pointer for the next node in the linked list
+// getNext retorna um ponteiro para o próximo node na lista linkada
 //
 Node* Node::getNext(){
      return next;
 }
 
-// setVal stores the integer value in the node
+// setVal armazena o valor inteiro no Node
 //
 void Node::setVal(int ldr1, int ldr2, int ldr_dig, int step_mot, int hr, int min, int sec, int ampm, int dd, int mm, int aa){
      LDR1 = ldr1;
@@ -76,7 +76,7 @@ void Node::setVal(int ldr1, int ldr2, int ldr_dig, int step_mot, int hr, int min
 }
 
 
-// setNext stores the pointer to the next node in the list in the "next" field
+// setNext armazena o ponteiro para o próximo Node na lista no "próximo" espaço
 //
 void Node::setNext(Node* nxt){
        next = nxt;
