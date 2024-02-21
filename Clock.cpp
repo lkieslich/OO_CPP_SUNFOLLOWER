@@ -6,6 +6,7 @@ using namespace std;
 Clock::Clock(int h, int s, int m, int pm)
 {
     setClock(h, s, m, pm);
+
 }
 void Clock::setClock(int h, int s, int m, int pm)
 {
